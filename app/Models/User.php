@@ -3,10 +3,13 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Domaine;
+use App\Models\Notation;
+use App\Models\Commentaire;
+use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
-use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
@@ -42,4 +45,19 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function commentaires(){
+
+        return $this->hasMany(Commentaire::class);
+    }
+
+    public function notations(){
+
+        return $this->hasMany(Notation::class);
+    }
+
+    public function domaine(){
+
+        return $this->belongsTo(Domaine::class);
+    }
 }
