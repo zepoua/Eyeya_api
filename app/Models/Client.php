@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Message;
 use App\Models\Notation;
 use App\Models\Commentaire;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +20,11 @@ class Client extends Model
     public function notations(){
 
         return $this->hasMany(Notation::class);
+    }
+
+    public function messages(){
+
+        return $this->hasMany(Message::class);
     }
 
 }
