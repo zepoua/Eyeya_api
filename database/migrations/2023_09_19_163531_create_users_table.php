@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('nom_entreprise');
+            $table->string('nom_entreprise')->nullable();
             $table->string('nom');
             $table->string('prenom');
             $table->string('email')->unique();
@@ -22,13 +22,13 @@ return new class extends Migration
             $table->string('adresse');
             $table->geometry('position')->nullable();
             $table->bigInteger('telephone1')->unique();
-            $table->bigInteger('telephone2')->unique();
+            $table->bigInteger('telephone2')->unique()->nullable();
             $table->string('qualification');
             $table->mediumText('experience');
             $table->mediumText('description');
-            $table->string('image1');
-            $table->string('image2');
-            $table->string('image3');
+            $table->string('image1')->nullable();
+            $table->string('image2')->nullable();
+            $table->string('image3')->nullable();
             $table->foreignId('domaine_id')->constrained();
             $table->rememberToken();
             $table->timestamps();

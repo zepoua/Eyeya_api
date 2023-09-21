@@ -11,6 +11,8 @@ class Notation extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['nbre_etoiles', 'user_id', 'client_id'];
+
     public function user(){
 
         return $this->belongsTo(User::class);

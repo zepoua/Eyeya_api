@@ -10,7 +10,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Client extends Model
 {
+
     use HasFactory;
+
+    protected $fillable = ['nom', 'prenom', 'email', 'telephone'];
 
     public function commentaires(){
 

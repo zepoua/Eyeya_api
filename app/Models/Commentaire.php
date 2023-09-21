@@ -11,6 +11,8 @@ class Commentaire extends Model
 {
     use HasFactory;
 
+    protected $fillable = ['commentaire_lib', 'user_id', 'client_id'];
+
     public function client(){
 
         return $this->belongsTo(Client::class);
