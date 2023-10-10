@@ -25,8 +25,44 @@ class ClientController extends Controller
      */
     public function store(Request $request)
     {
-        $client = Client::create($request->all());
-        return response()->json(['Client créé avec succès',$client]);
+       $validator = validator(
+        $request->all(),
+        [
+            'nom' => ['required', 'string'],
+            'prenom' => ['required', 'string'],
+            'email' => ['required', 'email', 'unique:clients,email'],
+            'telephone' => ['required', 'numeric', 'digits:8', 'unique:clients,telephone'],
+        ],
+        [
+            'required' => ':attribute est obligatoire',
+            'unique' => ':attribute existe déjà',
+            'numeric' => ':attribute doit être que des chiffres',
+            'digits' => ':attribute doit être de 8 chiffres',
+            'email.email' => 'L\'adresse email doit être une adresse email',
+        ],
+        [
+            'nom' => "Le nom",
+            'prenom' => "Le prenom",
+            'email' => "L'adresse mail",
+            'telephone' => "Le numéro de téléphone",
+        ]
+       );
+
+      try{
+        if($validator->fails()){
+            return response()->json($validator->errors()->first());
+           }else{
+            Client::create($request->all());
+            return response()->json([
+                'status' => 'success',
+                'code' => 201,
+                'message' => 'Client créé avec succès.'], 201);
+           }
+      }catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'code' => 500,
+            'message' => 'Une erreur s\'est produite lors de l\'enregistrement.'], 500);    }
     }
 
     /**
@@ -42,8 +78,46 @@ class ClientController extends Controller
      */
     public function update(Request $request, Client $client)
     {
-        $client->update($request->all());
-        return response()->json(['Client mise a jour avec succès',$client]);
+        $validator = validator(
+            $request->all(),
+            [
+                'nom' => ['required', 'string'],
+                'prenom' => ['required', 'string'],
+                'email' => ['required', 'email', 'unique:clients,email'],
+                'telephone' => ['required', 'numeric', 'digits:8', 'unique:clients,telephone'],
+            ],
+            [
+                'required' => ':attribute est obligatoire',
+                'unique' => ':attribute existe déjà',
+                'numeric' => ':attribute doit être que des chiffres',
+                'digits' => ':attribute doit être de 8 chiffres',
+                'email.email' => 'L\'adresse email doit être une adresse email',
+            ],
+            [
+                'email' => "L'adresse mail",
+                'telephone' => "Le numéro de téléphone",
+            ]
+           );
+
+          try{
+            if($validator->fails()){
+                return response()->json([
+                    'status' => 'failed',
+                    'code' => 500,
+                    'message' => $validator->errors()->first()
+                ]);
+               }else{
+                $client->update($request->all());
+                return response()->json([
+                    'status' => 'success',
+                    'code' => 201,
+                    'message' => 'Mise à jour réussie.'], 201);
+               }
+          }catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Une erreur s\'est produite lors de la mise à jour.'], 500);
+        }
 
     }
 
@@ -72,21 +146,20 @@ class ClientController extends Controller
         return response()->json(['message' => 'Notation enregistré avec succès', 'nbre_etoile'=> $notation->nbre_etoiles ]);
     }
 
-    public function list_message()
-    {
+    public function list_message(){
 
-    $messages = Message::with('user', 'client')->get();
+        $messages = Message::with('user', 'client')->get();
 
-    $response = [];
+        $response = [];
 
-    foreach ($messages as $message) {
-        $response[] = [
-            'message' => $message->message,
-            'author' => $message->user ? $message->user->nom : $message->client->nom,
-        ];
+        foreach ($messages as $message) {
+            $response[] = [
+                'message' => $message->message,
+                'author' => $message->user ? $message->user->nom : $message->client->nom,
+            ];
+        }
+        return response()->json($response);
     }
-    return response()->json($response);
-}
 
 
     public function enreg_message(Request $request)

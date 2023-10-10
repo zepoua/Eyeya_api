@@ -32,6 +32,10 @@ Route::post('enreg_notation', [ClientController::class, 'enreg_notation']);
 Route::get('message', [ClientController::class, 'list_message']);
 Route::post('enreg_message', [ClientController::class, 'enreg_message']);
 
+Route::get('domaine', [UserController::class, 'domaine']);
+
+Route::get('search', [UserController::class, 'search']);
+
 Route::post('/login', [UserController::class, 'login']);
 
 
