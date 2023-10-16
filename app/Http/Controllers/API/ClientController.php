@@ -52,11 +52,12 @@ class ClientController extends Controller
         if($validator->fails()){
             return response()->json($validator->errors()->first());
            }else{
-            Client::create($request->all());
+            $client = Client::create($request->all());
             return response()->json([
                 'status' => 'success',
                 'code' => 201,
-                'message' => 'Client créé avec succès.'], 201);
+                'message' => 'Client créé avec succès.',
+                'client_id' => $client->id], 201);
            }
       }catch (\Exception $e) {
         return response()->json([

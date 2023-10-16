@@ -23,6 +23,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::apiResource('client', ClientController::class);
 Route::apiResource('user', UserController::class);
 
+
 Route::get('commentaire/{userId}', [UserController::class, 'list_commentaire']);
 Route::post('enreg_commentaire', [ClientController::class, 'enreg_commentaire']);
 

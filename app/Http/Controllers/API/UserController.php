@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Throwable;
+use Illuminate\Support\Str;
 
 class UserController extends Controller
 {
@@ -18,28 +19,38 @@ class UserController extends Controller
 
 
     public function index(){
-         return response()->json(User::all());
+        $users = User::with(['domaine', 'notations'])->get();
+
+        $usersWithAverage = $users->map(function ($user) {
+            $user['moyenne_notations'] = $user->moyenneNotations();
+            return $user;
+        });
+        return response()->json($usersWithAverage);
     }
+
 
     public function search(Request $request)
     {
+        $search = $request->input('search', '');
 
-        if ($search = $request->search) {
-            $users = User::query()
-                ->leftJoin('domaines', 'users.domaine_id', '=', 'domaines.id')
-                ->where(function ($query) use ($search) {
-                    $query->where('nom_entreprise', 'LIKE', '%' . $search . '%')
-                          ->orWhere('nom', 'LIKE', '%' . $search . '%')
-                          ->orWhere('prenom', 'LIKE', '%' . $search . '%')
-                          ->orWhere('adresse', 'LIKE', '%' . $search . '%')
-                          ->orWhere('domaine_lib', 'LIKE', '%' . $search . '%');
-                })->get();
-            return response()->json($users);
-        } else {
-            return response()->json(User::all());
-        }
+        $users = User::with(['domaine', 'notations'])
+        ->select('users.*', 'domaines.domaine_lib')
+        ->leftJoin('domaines', 'users.domaine_id', '=', 'domaines.id')
+        ->where(function ($query) use ($search) {
+            $query->where('nom_entreprise', 'LIKE', '%' . $search . '%')
+                ->orWhere('nom', 'LIKE', '%' . $search . '%')
+                ->orWhere('prenom', 'LIKE', '%' . $search . '%')
+                ->orWhere('adresse', 'LIKE', '%' . $search . '%')
+                ->orWhere('domaines.domaine_lib', 'LIKE', '%' . $search . '%');
+        })
+        ->get();
 
-    }
+        $usersWithAverage = $users->map(function ($user) {
+            $user['moyenne_notations'] = $user->moyenneNotations();
+            return $user;
+        });
+
+        return response()->json($usersWithAverage);    }
 
     /**
      * Store a newly created resource in storage.
@@ -99,10 +110,22 @@ class UserController extends Controller
 
         try{
             if($validator->fails()){
-                return response()->json($validator->errors()->first());
-               }else{
-                User::create($request->all());
+
                 return response()->json([
+                    'status' => 'error',
+                    'code' => 500,
+                    'message' => $validator->errors()->first()], 500);
+                }else{
+
+                    $userData = $request->except(['image1', 'image2', 'image3']);
+                    // Traitez les fichiers d'image ici et stockez-les dans le système de fichiers
+                    $userData['image1'] = $request->file('image1')->store('images');
+                    $userData['image2'] = $request->file('image2')->store('images');
+                    $userData['image3'] = $request->file('image3')->store('images');
+
+                    User::create($userData);
+
+                    return response()->json([
                     'status' => 'success',
                     'code' => 201,
                     'message' => 'Professionnel créé avec succès.'], 201);
@@ -117,11 +140,20 @@ class UserController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(User $user)
-    {
-        return response()->json($user);
+    public function show($userId)
+{
+    $user = User::with(['domaine', 'notations'])->find($userId);
 
+    if (!$user) {
+        // Gérer le cas où l'utilisateur n'est pas trouvé
+        return response()->json(['message' => 'Utilisateur non trouvé'], 404);
     }
+
+    $user['moyenne_notations'] = $user->moyenneNotations();
+
+    return response()->json($user);
+}
+
 
     /**
      * Update the specified resource in storage.
@@ -167,25 +199,30 @@ class UserController extends Controller
 
     public function list_commentaire($userId)
     {
-        $user = User::find($userId);
-        $comments = $user->commentaires()->with('client')->get();
+        try {
+            $user = User::findOrFail($userId);
+            $comments = $user->commentaires()->with('client')->get();
 
-        $response = [];
+            $response = [];
 
-        foreach ($comments as $comment) {
-            $response[] = [
-                'commentaire' => $comment->commentaire_lib,
-                'client ' => $comment->client->nom,
-                'date' => $comment->created_at
-            ];
+            foreach ($comments as $comment) {
+                $response[] = [
+                    'commentaire' => $comment->commentaire_lib,
+                    'client' => $comment->client->nom,
+                    'date' => $comment->created_at
+                ];
+            }
+
+            return response()->json($response);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
-        return response()->json($response);
-
     }
 
     public function list_notation($userId)
     {
-        $averageStars = Notation::where('user_id', $userId)->avg('nbre_etoiles');
+        $averageStars = Notation::where('user_id', $userId)
+                                ->avg('nbre_etoiles');
 
         // Retourne la moyenne au format JSON
         return response()->json(['Nbre_etoiles' => $averageStars, 'user_id'=> $userId]);

@@ -79,4 +79,16 @@ class User extends Authenticatable
 
         return $this->hasMany(Message::class);
     }
+
+    public function moyenneNotations()
+    {
+        $notations = $this->notations;
+
+        if ($notations->count() > 0) {
+            $sommeNotes = $notations->sum('nbre_etoiles');
+            return $sommeNotes / $notations->count();
+        } else {
+            return 0;
+        }
+    }
 }
