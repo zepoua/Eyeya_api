@@ -136,16 +136,15 @@ class ClientController extends Controller
     {
         $commentaire = Commentaire::create($request->all());
 
-        return response()->json(['message' => 'Commentaire enregistré avec succès', 'Commentaire'=> $commentaire->commentaire_lib]);
+        $response = [
+            'commentaire' => $commentaire->commentaire_lib,
+            'client' => $commentaire->client->nom,
+            'date' => $commentaire->created_at
+        ];
+
+        return response()->json($response);
     }
 
-
-    public function enreg_notation(Request $request)
-    {
-        $notation = Notation::create($request->all());
-
-        return response()->json(['message' => 'Notation enregistré avec succès', 'nbre_etoile'=> $notation->nbre_etoiles ]);
-    }
 
     public function list_message(){
 

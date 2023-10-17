@@ -227,4 +227,16 @@ class UserController extends Controller
         // Retourne la moyenne au format JSON
         return response()->json(['Nbre_etoiles' => $averageStars, 'user_id'=> $userId]);
     }
+
+    public function enreg_notation(Request $request)
+    {
+        $notation = Notation::create($request->all());
+        $user = User::find($notation->user_id);
+
+        $newAverage = $user->moyenneNotations();
+
+        // Étape 4: Retournez la réponse avec la nouvelle moyenne
+        return response()->json($newAverage);
+    }
+
 }
