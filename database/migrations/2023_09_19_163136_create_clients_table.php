@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('prenom');
             $table->string('email')->unique();
             $table->bigInteger('telephone')->unique();
+            $table->string('icone');
             $table->rememberToken();
             $table->timestamps();
         });

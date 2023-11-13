@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('domaines', function (Blueprint $table) {
+        Schema::create('codes', function (Blueprint $table) {
             $table->id();
-            $table->string('domaine_lib');
-            $table->string('icone');
+            $table->bigInteger('telephone');
+            $table->bigInteger('code');
             $table->timestamps();
         });
     }
@@ -24,7 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-
-        Schema::dropIfExists('domaines');
+        Schema::dropIfExists('codes');
     }
 };

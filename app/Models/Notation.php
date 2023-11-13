@@ -11,7 +11,7 @@ class Notation extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nbre_etoiles', 'user_id', 'client_id'];
+    protected $fillable = ['user_id', 'client_id','nbre_etoiles'];
 
     public function user(){
 

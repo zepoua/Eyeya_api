@@ -13,7 +13,7 @@ class Client extends Model
 
     use HasFactory;
 
-    protected $fillable = ['nom', 'prenom', 'email', 'telephone'];
+    protected $fillable = ['nom', 'prenom', 'email', 'telephone', 'icone'];
 
     public function commentaires(){
 

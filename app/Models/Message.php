@@ -11,7 +11,13 @@ class Message extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['message', 'user_id', 'client_id'];
+    protected $fillable = [
+        'message',
+        'id_exp',
+        'exp_type',
+        'dest_type',
+        'id_dest',
+        'date_envoi',];
 
     public function client(){
 

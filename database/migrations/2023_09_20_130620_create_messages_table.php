@@ -14,10 +14,20 @@ return new class extends Migration
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
             $table->text('message');
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('client_id')->constrained();
+            $table->unsignedBigInteger('id_exp');
+            $table->string('exp_type');
+            $table->unsignedBigInteger('id_dest');
+            $table->string('dest_type');
+            $table->timestamp('date_envoi')->useCurrent();
             $table->timestamps();
+            $table->timestamp('read_at')->nullable();
+
+            // Clés étrangères pour les clients
+            $table->foreign('id_exp')->references('id')->on('clients');
+            $table->foreign('id_dest')->references('id')->on('clients');
         });
+
+
     }
 
     /**
