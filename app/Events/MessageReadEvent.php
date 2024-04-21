@@ -19,13 +19,11 @@ class MessageReadEvent implements ShouldBroadcast
      */
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $clientId;
-    public $interlocuteurId;
+    public $message;
 
-    public function __construct($clientId, $interlocuteurId)
+    public function __construct($message)
     {
-        $this->clientId = $clientId;
-        $this->interlocuteurId = $interlocuteurId;
+        $this->message = $message;
     }
 
     /**
@@ -35,6 +33,6 @@ class MessageReadEvent implements ShouldBroadcast
      */
     public function broadcastOn()
     {
-        return ['chat'];
+        return ['message'];
     }
 }

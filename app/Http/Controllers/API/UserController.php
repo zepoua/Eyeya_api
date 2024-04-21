@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Http;
 use Throwable;
 use Illuminate\Support\Str;
 use App\Events\MessagesEvent;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -34,14 +35,12 @@ class UserController extends Controller
         return $meters;
     }
 
-
     public function index_global()
     {
 
          $users = User::select('users.*', 'domaines.domaine_lib as domaine_lib')
          ->leftJoin('domaines', 'users.domaine_id', '=', 'domaines.id')
          ->orderBy('users.id', 'desc')
-         ->limit(5)
          ->get();
          $usersWithAverage = $users->map(function ($user) {
              $average = $user->notations()->avg('nbre_etoiles');
@@ -53,7 +52,8 @@ class UserController extends Controller
          return response()->json($sortedUsers);
 
     }
-     public function index(Request $request)
+
+    public function index(Request $request)
     {
         $domaineId = $request->input('domaine_id');
         $latitude = $request->input('latitude');
@@ -110,7 +110,6 @@ class UserController extends Controller
         return response()->json($sortedUsers);
     }
 
-
     public function global_search(Request $request)
     {
         // Récupérer le domaine_id et le terme de recherche depuis la requête
@@ -139,6 +138,7 @@ class UserController extends Controller
         $sortedUsers = $usersWithAverage->sortByDesc('moyenne_notations')->values()->all();
         return response()->json($sortedUsers);
     }
+
     public function search(Request $request)
     {
         // Récupérer le domaine_id et le terme de recherche depuis la requête
@@ -171,7 +171,6 @@ class UserController extends Controller
         return response()->json($sortedUsers);
     }
 
-
     public function domaine_search(Request $request)
     {
             $search = $request->input('search', '');
@@ -188,14 +187,13 @@ class UserController extends Controller
 
     }
 
-
     public function store_verification(Request $request)
     {
         try{
             $validator = validator(
                 $request->all(),
                 [
-                    'nom_entreprise' => 'string',
+                    'nom_entreprise' => ['required', 'string'],
                     'nom' => ['required', 'string'],
                     'prenom' => ['required', 'string'],
                     'email' => ['required', 'email', 'unique:users,email'],
@@ -204,27 +202,30 @@ class UserController extends Controller
                     'latitude' => 'required',
                     'longitude' => 'required',
                     'telephone1' => ['required', 'numeric', 'digits:8', 'unique:users,telephone1'],
-                    'telephone2' => ['numeric', 'digits:8', 'unique:users,telephone2'],
-                    'qualification' => 'required',
-                    'experience' => 'required',
-                    'description' => 'required',
-                    'image1' => 'required',
-                    'image2' => 'required',
+                    'telephone2' => ['required','numeric', 'digits:8'],
+                    'qualification' => ['required', 'string'],
+                    'experience' => ['required', 'string'],
+                    'description' => ['required', 'string'],
                     'domaine_id' => 'required',
+                    'image1' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image2' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image3' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
                 ],
                 [
-                    'string' => ':attribute doit être une chaîne de caractère',
-                    'required' => ':attribute est obligatoire',
-                    'unique' => ':attribute existe déjà',
-                    'numeric' => ':attribute doit être que des chiffres',
-                    'digits' => ':attribute doit être de 8 chiffres',
-                    'min' => ':attribute doit contenir 8 caractères minimum',
-                    'email.email' => 'L\'adresse email doit être une adresse email',
+                    'string' => ':attribute doit être une chaîne de caractère.',
+                    'required' => ':attribute est obligatoire.',
+                    'unique' => ':attribute existe déjà.',
+                    'numeric' => ':attribute doit être que des chiffres.',
+                    'digits' => ':attribute doit être de 8 chiffres.',
+                    'min' => ':attribute doit contenir 8 caractères minimum.',
+                    'email.email' => 'L\'adresse email doit être une adresse email.',
+                    'mimes' => ':attribute doit être de type :values.',
+                    'max' => ':attribute ne doit pas dépasser :max kilo-octets.',
                 ],
                 [
                     'nom_entreprise' => "Le nom de l'entreprise",
                     'nom' => "Le nom",
-                    'prenom' => "Le prenom",
+                    'prenom' => "Le prénom",
                     'email' => "L'adresse mail",
                     'password' => "Le mot de passe",
                     'adresse' => "L'adresse",
@@ -237,7 +238,8 @@ class UserController extends Controller
                     'description' => "La description",
                     'image1' => "La photo de profil",
                     'image2' => "La photo de couverture",
-                    'domaine_id' => "Le domaine d'activite",
+                    'domaine_id' => "Le domaine d'activité",
+                    'image3' => "La photo optionelle",
 
                 ]
                );} catch (Throwable $th) {
@@ -261,75 +263,98 @@ class UserController extends Controller
                     'password'=>'Tikegne2@21',
                     'destination'=>'228'.$request->telephone1,
                     'source'=>'EYEYA',
-                    'message'=>'Votre code de confirmation de votre inscription sur l\'application EYEYA est : '.$coderand];
+                    'message'=>'Votre code de confirmation de votre inscription sur l\'application EYEYA est : '.$coderand.'.'];
                 $reponse_sms = Http::get('http://sendsms.e-mobiletech.com/',$parametre);
 
-                $new_code = new Code();
-                $new_code->code = $coderand;
-                $new_code->telephone = $request->input('telephone1');
-                $new_code->save();
+                $verif = DB::table('codes')->where('telephone','=',$request->input('telephone'))->get();
+                if(count($verif)==0){
+                    $new_code = new Code;
+                    $new_code->code = $coderand;
+                    $new_code->telephone = $request->input('telephone');
+                    $new_code->save();
+                }else{
+                    DB::table('codes')->where('telephone','=',$request->input('telephone'))->update(['code'=>$coderand]);
+                }
 
                 return response()->json([
                     'status' => 'success',
                     'code' => 201,
-                    'message' => 'Code de confirmation envoye.']);
+                    'message' => 'Code de confirmation d\'inscription envoyé.']);
             }
         }catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'code' => 500,
-                'message' => 'Une erreur s\'est produite lors de l\'envoi du code confirmation.'], 500);}
+                'message' => 'Une erreur s\'est produite lors de l\'envoi du code de confirmation. Veuillez réessayer plus tard.'], 500);}
     }
+
     public function store(Request $request)
     {
-        try{
-            $validator = validator(
-                $request->all(),
-                [
-                    'code' => ['required', 'numeric', 'digits:6'],
-                ],
-                [
-                    'required' => ':attribute est obligatoire',
-                    'numeric' => ':attribute doit être que des chiffres',
-                    'digits' => ':attribute doit être de 6 chiffres',
-                ],
-                [
-                    'code' => "Le code de confirmation",
-                ]
-               );
-        } catch (Throwable $th) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 500,
-                'message' => $th->getMessage()], 500);        }
+        // try{
+        //     $validator = validator(
+        //         $request->all(),
+        //         [
+        //             'code' => ['required', 'numeric', 'digits:6'],
+        //         ],
+        //         [
+        //             'required' => ':attribute est obligatoire.',
+        //             'numeric' => ':attribute doit être que des chiffres.',
+        //             'digits' => ':attribute doit être de 6 chiffres.',
+        //         ],
+        //         [
+        //             'code' => "Le code de confirmation",
+        //         ]
+        //        );
+        // } catch (Throwable $th) {
+        //     return response()->json([
+        //         'status' => 'error',
+        //         'code' => 500,
+        //         'message' => $th->getMessage()], 500);        }
 
         try{
-            if($validator->fails()){
+            // if($validator->fails()){
 
-                return response()->json([
-                    'status' => 'error',
-                    'code' => 500,
-                    'message' => $validator->errors()->first()], 500);
-                }else{
+            //     return response()->json([
+            //         'status' => 'error',
+            //         'code' => 500,
+            //         'message' => $validator->errors()->first()], 500);
+            //     }else{
 
-                    $telephone = $request->input('telephone1');
-                    $coderand = $request->input('code');
-                    $code = Code::where('telephone', $telephone)->value('code');
+            //         $telephone = $request->input('telephone1');
+            //         $coderand = $request->input('code');
+            //         $code = Code::where('telephone', $telephone)->value('code');
 
-                    if ($coderand == $code) {
+            //         if ($coderand == $code) {
+                        // try {
+							$imageName1 = $request->image1->getClientOriginalName();
+							$request->image1->move(public_path('images/pro'), $imageName1);
 
-                        try {
+							$imageName2 = $request->image2->getClientOriginalName();
+							$request->image2->move(public_path('images/pro'), $imageName2);
+
+
+							if ($request->hasFile('image3')) {
+								$imageName3 = $request->image3->getClientOriginalName();
+								$request->image3->move(public_path('images/pro'), $imageName3);
+                                $userData = $request->except('code');
+                                $userData['image1']=$imageName1;
+                                $userData['image2']=$imageName2;
+                                $userData['image3']=$imageName3;
+                                $user = User::create($userData);
+							}else{
+                                $userData = $request->except('code');
+                                $userData['image1']=$imageName1;
+                                $userData['image2']=$imageName2;
+                                $user = User::create($userData);
+                            }
 
                             $client = new Client;
                             $client->nom = $request->input('nom');
                             $client->prenom = $request->input('prenom');
                             $client->email = $request->input('email');
                             $client->telephone = $request->input('telephone1');
-                            $client->icone = $request->input('image1');
+                            $client->icone = $imageName1;
                             $client->save();
-
-                            $userData = $request->except('code');
-                            $user = User::create($userData);
 
                             return response()->json([
                                 'status' => 'success',
@@ -338,33 +363,35 @@ class UserController extends Controller
                                 'client_id' => $client->id,
                                 'user_id' => $user->id], 201);
 
-                        } catch (\Exception $e) {
-                            return response()->json([
-                                'status' => 'error',
-                                'code' => 500,
-                                'message' => 'Adresse Email ou numero de telephone deja utilise.'], 500);
-                        }
+                        // } catch (\Exception $e) {
+                        //     return response()->json([
+                        //         'status' => 'error',
+                        //         'code' => 500,
+                        //         'message' => 'Adresse Email ou numéro de téléphone deja utilisé.'], 500);
+                        // }
 
-                    } else {
-                        return response()->json([
-                            'status' => 'error',
-                            'code' => 500,
-                            'message' => 'Code de Confirmation non valide.'], 500);
-                    }
-               }
+            //         } else {
+            //             return response()->json([
+            //                 'status' => 'error',
+            //                 'code' => 500,
+            //                 'message' => 'Code de Confirmation non valide.'], 500);
+            //         }
+            //    }
         }catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'code' => 500,
-                'message' => 'Une erreur s\'est produite lors de l\'inscription.'], 500); }
+                'message' => 'Erreur lors de l\'inscription. Veuillez réessayer plus tard.'], 500); }
     }
+
     public function client_user(Request $request)
     {
+        $mot= $request->input('password');
         try{
             $validator = validator(
                 $request->all(),
                 [
-                    'nom_entreprise' => 'string',
+                    'nom_entreprise' => ['required', 'string'],
                     'nom' => ['required', 'string'],
                     'prenom' => ['required', 'string'],
                     'email' => ['required', 'email', 'unique:users,email'],
@@ -373,27 +400,30 @@ class UserController extends Controller
                     'latitude' => 'required',
                     'longitude' => 'required',
                     'telephone1' => ['required', 'numeric', 'digits:8', 'unique:users,telephone1'],
-                    'telephone2' => ['numeric', 'digits:8', 'unique:users,telephone2'],
-                    'qualification' => 'required',
-                    'experience' => 'required',
-                    'description' => 'required',
-                    'image1' => 'required',
-                    'image2' => 'required',
+                    'telephone2' => ['required', 'numeric', 'digits:8'],
+                    'qualification' => ['required', 'string'],
+                    'experience' => ['required', 'string'],
+                    'description' => ['required', 'string'],
                     'domaine_id' => 'required',
+                    'image1' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image2' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image3' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
                 ],
                 [
-                    'string' => ':attribute doit être une chaîne de caractère',
-                    'required' => ':attribute est obligatoire',
-                    'unique' => ':attribute existe déjà',
-                    'numeric' => ':attribute doit être que des chiffres',
-                    'digits' => ':attribute doit être de 8 chiffres',
-                    'min' => ':attribute doit contenir 8 caractères minimum',
-                    'email.email' => 'L\'adresse email doit être une adresse email',
+                    'string' => ':attribute doit être une chaîne de caractère.',
+                    'required' => ':attribute est obligatoire.',
+                    'unique' => ':attribute existe déjà.',
+                    'numeric' => ':attribute doit être que des chiffres.',
+                    'digits' => ':attribute doit être de 8 chiffres.',
+                    'min' => ':attribute doit contenir 8 caractères minimum.',
+                    'email.email' => 'L\'adresse email doit être une adresse email.',
+                    'mimes' => ':attribute doit être de type :values.',
+                    'max' => ':attribute ne doit pas dépasser :max kilo-octets.',
                 ],
                 [
                     'nom_entreprise' => "Le nom de l'entreprise",
                     'nom' => "Le nom",
-                    'prenom' => "Le prenom",
+                    'prenom' => "Le prénom",
                     'email' => "L'adresse mail",
                     'password' => "Le mot de passe",
                     'adresse' => "L'adresse",
@@ -407,6 +437,7 @@ class UserController extends Controller
                     'image1' => "La photo de profil",
                     'image2' => "La photo de couverture",
                     'domaine_id' => "Le domaine d'activite",
+                    'image3' => "La photo optionelle",
 
                 ]
                );} catch (Throwable $th) {
@@ -423,18 +454,39 @@ class UserController extends Controller
                     'message' => $validator->errors()->first()], 500);
             }else{
 
-                User::create($request->all());
+                $imageName1 = $request->image1->getClientOriginalName();
+                $request->image1->move(public_path('images'), $imageName1);
+
+                $imageName2 = $request->image2->getClientOriginalName();
+                $request->image2->move(public_path('images'), $imageName2);
+
+
+                if ($request->hasFile('image3')) {
+                    $imageName3 = $request->image3->getClientOriginalName();
+                    $request->image3->move(public_path('images'), $imageName3);
+                    $userData = $request->except('image1, image2, image3');
+                    $userData['image1']=$imageName1;
+                    $userData['image2']=$imageName2;
+                    $userData['image3']=$imageName3;
+                    $user = User::create($userData);
+                }else{
+                    $userData = $request->except('image1, image2');
+                    $userData['image1']=$imageName1;
+                    $userData['image2']=$imageName2;
+                    $user = User::create($userData);
+                }
 
                 return response()->json([
                     'status' => 'success',
                     'code' => 201,
-                    'message' => 'Professionnel cree avec succes.']);
+                    'message' => 'Bravo, Vous êtes maintenant un Professionnel.',
+                    'user_id'=> $user->id], 201);
             }
-        }catch (\Exception $e) {
+        }catch (\Throwable $th) {
             return response()->json([
                 'status' => 'error',
                 'code' => 500,
-                'message' => 'Une erreur s\'est produite lors de l\'inscription.'], 500);}
+                'message' => $th->getMessage()], 500);}
     }
 
     public function show(Request $request)
@@ -442,6 +494,9 @@ class UserController extends Controller
         $userId = $request->input('user_id');
         $latitude = $request->input('latitude');
         $longitude = $request->input('longitude');
+
+        $user = User::find($userId);
+        $user->increment('vues');
 
         $user = User::select('users.*', 'domaines.domaine_lib as domaine_lib')
         ->leftJoin('domaines', 'users.domaine_id', '=', 'domaines.id')
@@ -463,18 +518,17 @@ class UserController extends Controller
         return response()->json($user);
     }
 
-
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, User $user)
+    public function update(Request $request)
     {
+        $user = User::find($request->user_id);
         $client_id = $request->input('id');
         $client_nom = $request->input('nom');
         $client_prenom = $request->input('prenom');
         $client_email = $request->input('email');
         $client_telephone = $request->input('telephone1');
-        $client_icone = $request->input('image1');
 
         try{
             $validator = validator(
@@ -483,33 +537,37 @@ class UserController extends Controller
                     'nom_entreprise' => 'string',
                     'nom' => ['required', 'string'],
                     'prenom' => ['required', 'string'],
-                    'email' => 'required',
+                    'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($user->id)],
                     'password' => ['required', 'min:8'],
                     'adresse' => 'required',
                     'latitude' => 'required',
                     'longitude' => 'required',
-                    'telephone1' => 'required',
-                    'telephone2' => 'required',
-                    'qualification' => 'required',
-                    'experience' => 'required',
-                    'description' => 'required',
-                    'image1' => 'required',
-                    'image2' => 'required',
+                    'telephone1' => ['required', 'numeric', 'digits:8', Rule::unique('users', 'telephone1')->ignore($user->id)],
+                    'telephone2' => ['required', 'numeric', 'digits:8', Rule::unique('users', 'telephone2')->ignore($user->id)],
+                    'qualification' => ['required', 'string'],
+                    'experience' => ['required', 'string'],
+                    'description' => ['required', 'string'],
                     'domaine_id' => 'required',
+                    'image1' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image2' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image3' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
                 ],
                 [
                     'string' => ':attribute doit être une chaîne de caractère',
                     'required' => ':attribute est obligatoire',
+                    'unique' => ':attribute existe déjà',
                     'numeric' => ':attribute doit être que des chiffres',
                     'digits' => ':attribute doit être de 8 chiffres',
                     'min' => ':attribute doit contenir 8 caractères minimum',
                     'email.email' => 'L\'adresse email doit être une adresse email',
+                    'mimes' => ':attribute doit être de type :values.',
+                    'max' => ':attribute ne doit pas dépasser :max kilo-octets.',
                 ],
                 [
                     'nom_entreprise' => "Le nom de l'entreprise",
                     'nom' => "Le nom",
                     'prenom' => "Le prenom",
-                    'email' => "L'adresse mail",
+                    'email' => "L'adresse email",
                     'password' => "Le mot de passe",
                     'adresse' => "L'adresse",
                     'latitude' => "La position",
@@ -522,6 +580,7 @@ class UserController extends Controller
                     'image1' => "La photo de profil",
                     'image2' => "La photo de couverture",
                     'domaine_id' => "Le domaine d'activite",
+                    'image3' => "La photo optionelle",
 
                 ]
                );} catch (Throwable $th) {
@@ -538,21 +597,56 @@ class UserController extends Controller
                     'code' => 500,
                     'message' => $validator->errors()->first()], 500);
             }else{
-                $userData = $request->except('id');
-                $user->update($userData);
+                if ($user->nbre_update < 3) {
+                    $ancienimage1 = $user->image1;
+                    $ancienimage2 = $user->image2;
+                    $ancienimage3 = $user->image3;
 
-                $client = Client::findOrFail($client_id);
-                $client->update([
-                    'nom' => $client_nom,
-                    'prenom' => $client_prenom,
-                    'email' => $client_email,
-                    'telephone' => $client_telephone,
-                    'icone' => $client_icone,
-                ]);
-                return response()->json([
-                    'status' => 'success',
-                    'code' => 201,
-                    'message' => 'Mise a jour reussie'], 201);
+                    $user->update($request->except('id, image1, image2, image3'));
+                    $client = Client::findOrFail($client_id);
+                    $client->update([
+                        'nom' => $client_nom,
+                        'prenom' => $client_prenom,
+                        'email' => $client_email,
+                        'telephone' => $client_telephone,
+                    ]);
+
+                    if ($request->hasFile('image1') && $request->file('image1')->getClientOriginalName() !== $ancienimage1) {
+                        $image1 = $request->image1->getClientOriginalName();
+                        $request->image1->move(public_path('images'), $image1);
+                        $user->image1 = $image1;
+                        $user->save();
+                        $client->icone = $image1;
+                        $client->save();
+                    }
+
+                    if ($request->hasFile('image2') && $request->file('image2')->getClientOriginalName() !== $ancienimage2) {
+                        $image2 = $request->image2->getClientOriginalName();
+                        $request->image2->move(public_path('images'), $image2);
+                        $user->image2 = $image2;
+                        $user->save();
+                    }
+
+                    if ($request->hasFile('image3') && $request->file('image3')->getClientOriginalName() !== $ancienimage3) {
+                        $image3 = $request->image3->getClientOriginalName();
+                        $request->image3->move(public_path('images'), $image3);
+                        $user->image3 = $image3;
+                        $user->save();
+                    }
+
+                    $user->increment('nbre_update');
+
+                    return response()->json([
+                        'status' => 'success',
+                        'code' => 201,
+                        'message' => 'Mise a jour reussie. Il vous reste '. 3-$user->nbre_update . ' modifications.'], 201);
+                }else{
+                    return response()->json([
+                        'status' => 'error',
+                        'code' => 500,
+                        'message' => 'Vous avez atteint le nombre maximal de modification de vos informations personnelles.'], 201);
+                }
+
             }
 
         }catch (\Exception $e) {
@@ -572,34 +666,98 @@ class UserController extends Controller
         return response()->json(['Professionnel supprime avec succès',User::all()]);
     }
 
-    public function domaine()
-    {
-        $domainesWithCount = DB::table('domaines')
-        ->select('domaines.id', 'domaines.domaine_lib', 'domaines.icone', DB::raw('COUNT(users.id) as nombre_users'))
-        ->leftJoin('users', 'domaines.id', '=', 'users.domaine_id')
-        ->groupBy('domaines.id')
-        ->get();
-        return response()->json($domainesWithCount);
 
+    public function domaine($id)
+    {
+        // Nombre total de domaines
+        $totalDomaines = Domaine::count();
+
+        // Nombre total de domaines
+        $totalUsers = User::count();
+
+        // Nombre de personnes avec lesquelles $id a discuté
+        $nombrePersonnes = DB::table('messages')
+            ->select(DB::raw('COUNT(DISTINCT id_dest) as nombre_personnes'))
+            ->where('id_exp', $id)
+            ->get()[0]->nombre_personnes;
+
+        //liste ded domaines
+        $domainesWithCount = DB::table('domaines')
+            ->select('domaines.id', 'domaines.domaine_lib', 'domaines.icone', DB::raw('COUNT(users.id) as nombre_users'))
+            ->leftJoin('users', 'domaines.id', '=', 'users.domaine_id')
+            ->groupBy('domaines.id')
+            ->get();
+
+        return response()->json([
+            'domaines' => $totalDomaines,
+            'discussions' => $nombrePersonnes,
+            'users' => $totalUsers,
+            'liste_domaines' => $domainesWithCount,
+        ]);
+    }
+
+    public function liste_domaines()
+    {
+        //liste ded domaines
+        $domainesWithCount = Domaine::all();
+        return response()->json($domainesWithCount);
     }
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
 
-        if (Auth::attempt($credentials)) {
+        $validator = validator(
+            $request->all(),
+            [
+                'email' => ['required', 'email'],
+                'password' => 'required'
+            ],
+            [
+                'required' => ':attribute est obligatoire.',
+                'email.email' => 'L\'adresse email doit etre une adresse email.'
+            ],
+            [
+                'email' => "L'adresse email",
+                'password' => "Le mot de passe"
+            ]
+            );
 
-            $user = auth()->user();
-            $token = $user->createToken('token')->plainTextToken;
+        try{
+            if($validator->fails()){
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 500,
+                    'message' => $validator->errors()->first()], 500);
+            }else{
 
-            return response()->json(['message'=>'utilisateur connecte', 'user'=>$user, 'token'=>$token]);
-        }else
-            return response('identifiants non valides');
+                $credentials = $request->only('email', 'password');
+
+                if (Auth::attempt($credentials)) {
+                    $user = auth()->user();
+                    $clientId = Client::select('id')
+                    ->where('email', '=', $user->email)
+                    ->value('id');
+                    $user['user_id'] = $user->id;
+                    $user['id'] = $clientId;
+
+                    return response()->json([
+                        'status' => 'success',
+                        'code' => 201,
+                        'message' => 'Heureux de vous revoir.',
+                        'user_data' => $user], 201);
+                }else
+                    return response()->json([
+                        'status' => 'error',
+                        'code' => 500,
+                        'message' => 'Identifiants non valides.'], 500);
+            }
+        }catch(\Exception $e){
+            return response()->json([
+                'status' => 'error',
+                'code' => 500,
+                'message' => 'Une erreur s\'est produite lors de la connexion. Veuillez ressayer plus tard.'],500);
+        }
     }
-
 
     public function list_commentaire($userId)
     {
@@ -629,8 +787,9 @@ class UserController extends Controller
         $averageStars = Notation::where('user_id', $userId)
                                 ->avg('nbre_etoiles');
 
+        $vues = User::where('id', $userId)->get('vues')[0]->vues;
         // Retourne la moyenne au format JSON
-        return response()->json(['message'=>'moyenne calcule', 'moyenne_notations'=>$averageStars]);
+        return response()->json(['message'=>'moyenne calcule', 'moyenne_notations'=>$averageStars, 'vues' => $vues]);
     }
 
     public function enreg_notation(Request $request)
@@ -647,5 +806,30 @@ class UserController extends Controller
             ->avg('nbre_etoiles');
 
         return response()->json($averageRating);
+    }
+
+    public function vues(Request $request){
+        $userId = $request->input('user_id');
+        $latitude = $request->input('latitude');
+        $longitude = $request->input('longitude');
+
+        $user = User::select('users.*', 'domaines.domaine_lib as domaine_lib')
+        ->leftJoin('domaines', 'users.domaine_id', '=', 'domaines.id')
+        ->find($userId);
+
+        if (!$user) {
+            // Gérer le cas où l'utilisateur n'est pas trouvé
+            return response()->json(['message' => 'Utilisateur non trouvé'], 404);
+        }
+
+        $average = $user->notations()->avg('nbre_etoiles'); // Remplacez par la colonne de notation
+        $user['moyenne_notations'] = $average !== null ? $average : 0;
+        $user->distance = $this->calculateDistance($latitude, $longitude, $user->latitude, $user->longitude);
+        $clientId = Client::select('id')
+                    ->where('email', '=', $user->email)
+                    ->value('id');
+
+        $user['clientId'] = $clientId;
+        return response()->json($user);
     }
 }

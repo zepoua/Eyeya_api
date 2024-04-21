@@ -16,37 +16,63 @@ class MessageController extends Controller
      * Display a listing of the resource.
      */
     public function index($clientId)
-{
-    $discussions = Client::select(
-            'clients.id as interlocuteur_id',
-            'clients.nom',
-            'clients.prenom',
-            'clients.icone as avatar',
-            DB::raw('SUM(CASE WHEN messages.read_at IS NULL AND messages.id_exp <> ' . $clientId . ' THEN 1 ELSE 0 END) as nombre_messages_non_lus'),
-            DB::raw('MAX(messages.date_envoi) as date_dernier_message'),
-            DB::raw('(SELECT message FROM messages WHERE (messages.id_exp = ' . $clientId . ' AND messages.id_dest = clients.id) OR (messages.id_dest = ' . $clientId . ' AND messages.id_exp = clients.id) ORDER BY messages.date_envoi DESC LIMIT 1) as dernier_message')
-        )
-        ->leftJoin('messages', function ($join) use ($clientId) {
-            $join->on('clients.id', '=', 'messages.id_exp')
-                ->where('messages.id_dest', '=', $clientId)
-                ->orWhere(function ($query) use ($clientId) {
-                    $query->on('clients.id', '=', 'messages.id_dest')
-                        ->where('messages.id_exp', '=', $clientId);
-                });
-        })
-        ->where('clients.id', '<>', $clientId) // Exclure le client lui-même
-        ->groupBy('clients.id', 'clients.nom', 'clients.prenom', 'clients.icone')
-        ->get();
+    {
+        $discussions = Client::select(
+                'clients.id as interlocuteur_id',
+                'clients.nom',
+                'clients.prenom',
+                'clients.icone as avatar',
+                DB::raw('SUM(CASE WHEN messages.read_at IS NULL AND messages.id_exp <> ' . $clientId . ' THEN 1 ELSE 0 END) as nombre_messages_non_lus'),
+                DB::raw('MAX(messages.date_envoi) as date_dernier_message'),
+                DB::raw('(SELECT message FROM messages WHERE (messages.id_exp = ' . $clientId . ' AND messages.id_dest = clients.id) OR (messages.id_dest = ' . $clientId . ' AND messages.id_exp = clients.id) ORDER BY messages.date_envoi DESC LIMIT 1) as dernier_message')
+            )
+            ->leftJoin('messages', function ($join) use ($clientId) {
+                $join->on('clients.id', '=', 'messages.id_exp')
+                    ->where('messages.id_dest', '=', $clientId)
+                    ->orWhere(function ($query) use ($clientId) {
+                        $query->on('clients.id', '=', 'messages.id_dest')
+                            ->where('messages.id_exp', '=', $clientId);
+                    });
+            })
+            ->where(function ($query) use ($clientId) {
+                $query->where('messages.id_exp', '=', $clientId)
+                    ->orWhere('messages.id_dest', '=', $clientId);
+            }) // Ajout de la condition pour inclure uniquement les discussions du client
+            ->where('clients.id', '<>', $clientId) // Exclure le client lui-même
+            ->groupBy('clients.id', 'clients.nom', 'clients.prenom', 'clients.icone')
+            ->get();
 
-    return response()->json(['discussions' => $discussions], 200);
-}
+        return response()->json(['discussions' => $discussions], 200);
+    }
+
 
 
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    // public function store(Request $request)
+    // {
+    //     $messageContent = $request->input('message');
+    //     $expediteurId = $request->input('exp_id');
+    //     $destinataireId = $request->input('dest_id');
+
+    //     // Créez un nouveau message en utilisant la fonction du modèle
+    //     $message = Message::create([
+    //         'message' => $messageContent,
+    //         'id_exp' => $expediteurId,
+    //         'id_dest' => $destinataireId,
+    //         'date_envoi' => now(), ]);
+
+    //         event(new MessagesEvent($message));
+
+    //         return response()->json([
+    //             'status' => 'success',
+    //             'code' => 201,
+    //             'message' => 'Message envoye'], 201);
+    // }
+
+    public function message(Request $request)
     {
         $messageContent = $request->input('message');
         $expediteurId = $request->input('exp_id');
@@ -57,14 +83,14 @@ class MessageController extends Controller
             'message' => $messageContent,
             'id_exp' => $expediteurId,
             'id_dest' => $destinataireId,
-            'date_envoi' => now(), ]);
+            'date_envoi' => now()
+        ]);
 
-            event(new MessagesEvent($message));
+        //event(new MessageReadEvent($message));
 
-            return response()->json([
-                'status' => 'success',
-                'code' => 201,
-                'message' => 'Message envoye'], 201);
+        return response()->json([
+            'status' => 'success',
+            'code' => 201], 201);
     }
 
     /**
@@ -120,20 +146,17 @@ class MessageController extends Controller
         ->orderBy('messages.date_envoi', 'asc')
         ->get();
 
+        $msgs = Message::where('id_dest', $clientId)
+                        ->where('id_exp', $interlocuteurId)
+                        ->whereNull('read_at')
+                        ->get();
+
+        foreach ($msgs as $msg) {
+            DB::table('messages')->where('id','=',$msg->id)->update(['read_at'=>now()]);
+        }
+
         return response()->json(['messages' => $messages], 200);
+
     }
 
-    public function updateReadStatus($clientId, $interlocuteurId)
-    {
-        // Mettez à jour le champ read_at pour marquer les messages comme lus
-        Message::where('id_exp', $interlocuteurId)
-            ->where('id_dest', $clientId)
-            ->update(['read_at' => now()]);
-
-
-            //event(new MessageReadEvent($clientId, $interlocuteurId));
-
-        // Vous pouvez renvoyer une réponse si nécessaire
-        return response()->json(['message' => 'Read status updated successfully'], 200);
-    }
 }

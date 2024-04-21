@@ -18,9 +18,8 @@ return new class extends Migration
             $table->string('exp_type');
             $table->unsignedBigInteger('id_dest');
             $table->string('dest_type');
-            $table->timestamp('date_envoi')->useCurrent();
-            $table->timestamps();
-            $table->timestamp('read_at')->nullable();
+            $table->date('date_envoi');
+            $table->date('read_at')->nullable();
 
             // Clés étrangères pour les clients
             $table->foreign('id_exp')->references('id')->on('clients');

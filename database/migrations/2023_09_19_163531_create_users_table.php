@@ -23,7 +23,7 @@ return new class extends Migration
             $table->double('latitude')->nullable();
             $table->double('longitude')->nullable();
             $table->bigInteger('telephone1')->unique();
-            $table->bigInteger('telephone2')->unique()->nullable();
+            $table->bigInteger('telephone2')->nullable();
             $table->string('qualification');
             $table->mediumText('experience');
             $table->mediumText('description');
