@@ -41,7 +41,9 @@ class UserController extends Controller
          $users = User::select('users.*', 'domaines.domaine_lib as domaine_lib')
          ->leftJoin('domaines', 'users.domaine_id', '=', 'domaines.id')
          ->orderBy('users.id', 'desc')
+         ->limit('100')
          ->get();
+
          $usersWithAverage = $users->map(function ($user) {
              $average = $user->notations()->avg('nbre_etoiles');
              $user['moyenne_notations'] = $average !== null ? $average : 0;
@@ -187,6 +189,122 @@ class UserController extends Controller
 
     }
 
+    // public function store(Request $request)
+    // {
+    //     try{
+    //         $validator = validator(
+    //             $request->all(),
+    //             [
+    //                 'nom_entreprise' => ['required', 'string'],
+    //                 'nom' => ['required', 'string'],
+    //                 'prenom' => ['required', 'string'],
+    //                 'email' => ['required', 'email', 'unique:users,email'],
+    //                 'password' => ['required', 'min:8'],
+    //                 'adresse' => 'required',
+    //                 'latitude' => 'required',
+    //                 'longitude' => 'required',
+    //                 'telephone1' => ['required', 'numeric', 'digits:8', 'unique:users,telephone1'],
+    //                 'telephone2' => ['required','numeric', 'digits:8'],
+    //                 'qualification' => ['required', 'string'],
+    //                 'experience' => ['required', 'string'],
+    //                 'description' => ['required', 'string'],
+    //                 'domaine_id' => 'required',
+    //                 'image1' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+    //                 'image2' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+    //                 'image3' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
+    //             ],
+    //             [
+    //                 'string' => ':attribute doit être une chaîne de caractère.',
+    //                 'required' => ':attribute est obligatoire.',
+    //                 'unique' => ':attribute existe déjà.',
+    //                 'numeric' => ':attribute doit être que des chiffres.',
+    //                 'digits' => ':attribute doit être de 8 chiffres.',
+    //                 'min' => ':attribute doit contenir 8 caractères minimum.',
+    //                 'email.email' => 'L\'adresse email doit être une adresse email.',
+    //                 'mimes' => ':attribute doit être de type :values.',
+    //                 'max' => ':attribute ne doit pas dépasser :max kilo-octets.',
+    //             ],
+    //             [
+    //                 'nom_entreprise' => "Le nom de l'entreprise",
+    //                 'nom' => "Le nom",
+    //                 'prenom' => "Le prénom",
+    //                 'email' => "L'adresse mail",
+    //                 'password' => "Le mot de passe",
+    //                 'adresse' => "L'adresse",
+    //                 'latitude' => "La position",
+    //                 'longititude' => "La position",
+    //                 'telephone1' => "Le numéro de téléphone 1",
+    //                 'telephone2' => "Le numéro de téléphone 2",
+    //                 'qualification' => "La/les qualification(s)",
+    //                 'experience' => "L'/les expérience(s)",
+    //                 'description' => "La description",
+    //                 'image1' => "La photo de profil",
+    //                 'image2' => "La photo de couverture",
+    //                 'domaine_id' => "Le domaine d'activité",
+    //                 'image3' => "La photo optionelle",
+
+    //             ]
+    //            );
+    //         } catch (Throwable $th) {
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'code' => 500,
+    //                 'message' => $th->getMessage()], 500);            }
+
+    //     try{
+    //         if($validator->fails()){
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'code' => 500,
+    //                 'message' => $validator->errors()->first()], 500);
+    //         }else{
+
+    //             $imageName1 = $request->image1->getClientOriginalName();
+    //             $request->image1->move(public_path('images'), $imageName1);
+
+    //             $imageName2 = $request->image2->getClientOriginalName();
+    //             $request->image2->move(public_path('images'), $imageName2);
+
+
+    //             if ($request->hasFile('image3')) {
+    //                 $imageName3 = $request->image3->getClientOriginalName();
+    //                 $request->image3->move(public_path('images'), $imageName3);
+
+    //                 $userData = $request->all();
+    //                 $userData['image1']=$imageName1;
+    //                 $userData['image2']=$imageName2;
+    //                 $userData['image3']=$imageName3;
+    //                 $user = User::create($userData);
+    //             }else{
+    //                 $userData = $request->all();
+    //                 $userData['image1']=$imageName1;
+    //                 $userData['image2']=$imageName2;
+    //                 $user = User::create($userData);
+    //             }
+
+    //             $client = new Client;
+    //             $client->nom = $request->input('nom');
+    //             $client->prenom = $request->input('prenom');
+    //             $client->email = $request->input('email');
+    //             $client->telephone = $request->input('telephone1');
+    //             $client->icone = $imageName1;
+    //             $client->save();
+
+    //             return response()->json([
+    //                 'status' => 'success',
+    //                 'code' => 201,
+    //                 'message' => 'Compte Professionnel créé avec succès.',
+    //                 'client_id' => $client->id,
+    //                 'user_id' => $user->id], 201);
+
+    //         }
+    //     }catch (\Exception $e) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'code' => 500,
+    //             'message' => 'Une erreur s\'est produite lors de l\'envoi du code de confirmation. Veuillez réessayer plus tard.'], 500);}
+    // }
+
     public function store_verification(Request $request)
     {
         try{
@@ -202,7 +320,7 @@ class UserController extends Controller
                     'latitude' => 'required',
                     'longitude' => 'required',
                     'telephone1' => ['required', 'numeric', 'digits:8', 'unique:users,telephone1'],
-                    'telephone2' => ['required','numeric', 'digits:8'],
+                    'telephone2' => ['nullable','numeric', 'digits:8'],
                     'qualification' => ['required', 'string'],
                     'experience' => ['required', 'string'],
                     'description' => ['required', 'string'],
@@ -242,7 +360,8 @@ class UserController extends Controller
                     'image3' => "La photo optionelle",
 
                 ]
-               );} catch (Throwable $th) {
+               );
+            } catch (Throwable $th) {
                 return response()->json([
                     'status' => 'error',
                     'code' => 500,
@@ -266,14 +385,14 @@ class UserController extends Controller
                     'message'=>'Votre code de confirmation de votre inscription sur l\'application EYEYA est : '.$coderand.'.'];
                 $reponse_sms = Http::get('http://sendsms.e-mobiletech.com/',$parametre);
 
-                $verif = DB::table('codes')->where('telephone','=',$request->input('telephone'))->get();
+                $verif = DB::table('codes')->where('telephone','=',$request->input('telephone1'))->get();
                 if(count($verif)==0){
                     $new_code = new Code;
                     $new_code->code = $coderand;
-                    $new_code->telephone = $request->input('telephone');
+                    $new_code->telephone = $request->input('telephone1');
                     $new_code->save();
                 }else{
-                    DB::table('codes')->where('telephone','=',$request->input('telephone'))->update(['code'=>$coderand]);
+                    DB::table('codes')->where('telephone','=',$request->input('telephone1'))->update(['code'=>$coderand]);
                 }
 
                 return response()->json([
@@ -290,52 +409,46 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        // try{
-        //     $validator = validator(
-        //         $request->all(),
-        //         [
-        //             'code' => ['required', 'numeric', 'digits:6'],
-        //         ],
-        //         [
-        //             'required' => ':attribute est obligatoire.',
-        //             'numeric' => ':attribute doit être que des chiffres.',
-        //             'digits' => ':attribute doit être de 6 chiffres.',
-        //         ],
-        //         [
-        //             'code' => "Le code de confirmation",
-        //         ]
-        //        );
-        // } catch (Throwable $th) {
-        //     return response()->json([
-        //         'status' => 'error',
-        //         'code' => 500,
-        //         'message' => $th->getMessage()], 500);        }
+        $validator = validator(
+            $request->all(),
+            [
+                'code' => ['required', 'numeric', 'digits:6'],
+            ],
+            [
+                'required' => ':attribute est obligatoire.',
+                'numeric' => ':attribute doit être que des chiffres.',
+                'digits' => ':attribute doit être de 6 chiffres.',
+            ],
+            [
+                'code' => "Le code de confirmation",
+            ]
+        );
 
         try{
-            // if($validator->fails()){
+            if($validator->fails()){
 
-            //     return response()->json([
-            //         'status' => 'error',
-            //         'code' => 500,
-            //         'message' => $validator->errors()->first()], 500);
-            //     }else{
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 500,
+                    'message' => $validator->errors()->first()], 500);
+                }else{
 
-            //         $telephone = $request->input('telephone1');
-            //         $coderand = $request->input('code');
-            //         $code = Code::where('telephone', $telephone)->value('code');
+                    $telephone = $request->input('telephone1');
+                    $coderand = $request->input('code');
+                    $code = Code::where('telephone', $telephone)->value('code');
 
-            //         if ($coderand == $code) {
-                        // try {
+                    if ($coderand == $code) {
+                        try {
 							$imageName1 = $request->image1->getClientOriginalName();
-							$request->image1->move(public_path('images/pro'), $imageName1);
+							$request->image1->move(public_path('images'), $imageName1);
 
 							$imageName2 = $request->image2->getClientOriginalName();
-							$request->image2->move(public_path('images/pro'), $imageName2);
+							$request->image2->move(public_path('images'), $imageName2);
 
 
 							if ($request->hasFile('image3')) {
 								$imageName3 = $request->image3->getClientOriginalName();
-								$request->image3->move(public_path('images/pro'), $imageName3);
+								$request->image3->move(public_path('images'), $imageName3);
                                 $userData = $request->except('code');
                                 $userData['image1']=$imageName1;
                                 $userData['image2']=$imageName2;
@@ -361,22 +474,23 @@ class UserController extends Controller
                                 'code' => 201,
                                 'message' => 'Compte Professionnel créé avec succès.',
                                 'client_id' => $client->id,
-                                'user_id' => $user->id], 201);
+                                'user_id' => $user->id
+                            ], 201);
 
-                        // } catch (\Exception $e) {
-                        //     return response()->json([
-                        //         'status' => 'error',
-                        //         'code' => 500,
-                        //         'message' => 'Adresse Email ou numéro de téléphone deja utilisé.'], 500);
-                        // }
+                        } catch (\Exception $e) {
+                            return response()->json([
+                                'status' => 'error',
+                                'code' => 500,
+                                'message' => 'Adresse Email ou numéro de téléphone deja utilisé.'], 500);
+                        }
 
-            //         } else {
-            //             return response()->json([
-            //                 'status' => 'error',
-            //                 'code' => 500,
-            //                 'message' => 'Code de Confirmation non valide.'], 500);
-            //         }
-            //    }
+                    } else {
+                        return response()->json([
+                            'status' => 'error',
+                            'code' => 500,
+                            'message' => 'Code de Confirmation non valide.'], 500);
+                    }
+               }
         }catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
@@ -387,6 +501,7 @@ class UserController extends Controller
     public function client_user(Request $request)
     {
         $mot= $request->input('password');
+
         try{
             $validator = validator(
                 $request->all(),
@@ -400,7 +515,7 @@ class UserController extends Controller
                     'latitude' => 'required',
                     'longitude' => 'required',
                     'telephone1' => ['required', 'numeric', 'digits:8', 'unique:users,telephone1'],
-                    'telephone2' => ['required', 'numeric', 'digits:8'],
+                    'telephone2' => ['nullable', 'numeric', 'digits:8'],
                     'qualification' => ['required', 'string'],
                     'experience' => ['required', 'string'],
                     'description' => ['required', 'string'],
@@ -548,8 +663,8 @@ class UserController extends Controller
                     'experience' => ['required', 'string'],
                     'description' => ['required', 'string'],
                     'domaine_id' => 'required',
-                    'image1' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
-                    'image2' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image1' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
+                    'image2' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
                     'image3' => ['nullable', 'mimes:jpeg,png,jpg', 'max:3072'],
                 ],
                 [
@@ -559,7 +674,7 @@ class UserController extends Controller
                     'numeric' => ':attribute doit être que des chiffres',
                     'digits' => ':attribute doit être de 8 chiffres',
                     'min' => ':attribute doit contenir 8 caractères minimum',
-                    'email.email' => 'L\'adresse email doit être une adresse email',
+                    'email' => 'L\'adresse email doit être une adresse email',
                     'mimes' => ':attribute doit être de type :values.',
                     'max' => ':attribute ne doit pas dépasser :max kilo-octets.',
                 ],
@@ -681,7 +796,7 @@ class UserController extends Controller
             ->where('id_exp', $id)
             ->get()[0]->nombre_personnes;
 
-        //liste ded domaines
+        //liste des domaines
         $domainesWithCount = DB::table('domaines')
             ->select('domaines.id', 'domaines.domaine_lib', 'domaines.icone', DB::raw('COUNT(users.id) as nombre_users'))
             ->leftJoin('users', 'domaines.id', '=', 'users.domaine_id')
@@ -703,9 +818,8 @@ class UserController extends Controller
         return response()->json($domainesWithCount);
     }
 
-    public function login(Request $request)
+        public function login(Request $request)
     {
-
         $validator = validator(
             $request->all(),
             [
@@ -714,48 +828,54 @@ class UserController extends Controller
             ],
             [
                 'required' => ':attribute est obligatoire.',
-                'email.email' => 'L\'adresse email doit etre une adresse email.'
+                'email.email' => 'L\'adresse email doit être une adresse email valide.'
             ],
             [
                 'email' => "L'adresse email",
                 'password' => "Le mot de passe"
             ]
-            );
+        );
 
-        try{
-            if($validator->fails()){
+        try {
+            if ($validator->fails()) {
                 return response()->json([
                     'status' => 'error',
                     'code' => 500,
-                    'message' => $validator->errors()->first()], 500);
-            }else{
+                    'message' => $validator->errors()->first()
+                ], 500);
+            }
 
-                $credentials = $request->only('email', 'password');
+            $credentials = $request->only('email', 'password');
 
-                if (Auth::attempt($credentials)) {
-                    $user = auth()->user();
-                    $clientId = Client::select('id')
+            if (Auth::attempt($credentials)) {
+                $user = auth()->user();
+                $clientId = Client::select('id')
                     ->where('email', '=', $user->email)
                     ->value('id');
-                    $user['user_id'] = $user->id;
-                    $user['id'] = $clientId;
 
-                    return response()->json([
-                        'status' => 'success',
-                        'code' => 201,
-                        'message' => 'Heureux de vous revoir.',
-                        'user_data' => $user], 201);
-                }else
-                    return response()->json([
-                        'status' => 'error',
-                        'code' => 500,
-                        'message' => 'Identifiants non valides.'], 500);
+                // Ajouter le mot de passe hashé à la réponse
+                $user['user_id'] = $user->id;
+                $user['id'] = $clientId;
+
+                return response()->json([
+                    'status' => 'success',
+                    'code' => 201,
+                    'message' => 'Heureux de vous revoir.',
+                    'user_data' => $user
+                ], 201);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 500,
+                    'message' => 'Identifiants non valides.'
+                ], 500);
             }
-        }catch(\Exception $e){
+        } catch (\Exception $e) {
             return response()->json([
                 'status' => 'error',
                 'code' => 500,
-                'message' => 'Une erreur s\'est produite lors de la connexion. Veuillez ressayer plus tard.'],500);
+                'message' => 'Une erreur s\'est produite lors de la connexion. Veuillez réessayer plus tard.'
+            ], 500);
         }
     }
 
@@ -809,6 +929,7 @@ class UserController extends Controller
     }
 
     public function vues(Request $request){
+
         $userId = $request->input('user_id');
         $latitude = $request->input('latitude');
         $longitude = $request->input('longitude');

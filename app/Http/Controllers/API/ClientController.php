@@ -27,6 +27,62 @@ class ClientController extends Controller
         return response()->json(Client::all());
     }
 
+    public function store(Request $request){
+        $validator = validator(
+            $request->all(),
+            [
+                'nom' => ['required', 'string'],
+                'prenom' => ['required', 'string'],
+                'email' => ['required', 'email', 'unique:clients,email'],
+                'telephone' => ['required', 'numeric', 'digits:8', 'unique:clients,telephone'],
+                'icone' => ['required', 'mimes:jpeg,png,jpg', 'max:3072'],
+            ],
+            [
+                'required' => ':attribute est obligatoire.',
+                'unique' => ':attribute existe déjà.',
+                'numeric' => ':attribute doit être que des chiffres.',
+                'digits' => ':attribute doit être de 8 chiffres.',
+                'email.email' => 'L\'adresse email doit être une adresse email.',
+                'mimes' => ':attribute doit être de type :values.',
+                'max' => ':attribute ne doit pas dépasser :max kilo-octets.',
+            ],
+            [
+                'nom' => "Le nom",
+                'prenom' => "Le prénom",
+                'email' => "L'adresse mail",
+                'telephone' => "Le numéro de téléphone",
+                'icone' => "La photo de profil"
+            ]
+        );
+        try{
+            if($validator->fails()){
+                return response()->json([
+                    'status' => 'error',
+                    'code' => 500,
+                    'message' => $validator->errors()->first()], 500);
+            }else{
+
+                $icone = $request->icone->getClientOriginalName();
+                $request->icone->move(public_path('images'), $icone);
+
+                $clientData = $request->all();
+                $clientData['icone']=$icone;
+                $client = Client::create($clientData);
+
+                return response()->json([
+                    'status' => 'success',
+                    'code' => 201,
+                    'message' => 'Compte Client créé avec succès.',
+                    'client_id' => $client->id], 201);
+            }
+          }catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'code' => 500,
+                'message' => 'Une erreur s\'est produite lors de l\'envoi du code de confirmation. Verifiez votre connexion et réessayez.'], 500);
+            }
+    }
+
     public function store_verification(Request $request){
         $validator = validator(
             $request->all(),
@@ -53,8 +109,8 @@ class ClientController extends Controller
                 'telephone' => "Le numéro de téléphone",
                 'icone' => "La photo de profil"
             ]
-           );
-          try{
+        );
+        try{
             if($validator->fails()){
                 return response()->json([
                     'status' => 'error',
@@ -97,66 +153,59 @@ class ClientController extends Controller
             }
     }
 
+    // public function store(Request $request)
+    // {
+    //     $validator = validator(
+    //         $request->all(),
+    //         [
+    //             'code' => ['required', 'numeric', 'digits:6'],
+    //         ],
+    //         [
+    //             'required' => ':attribute est obligatoire.',
+    //             'numeric' => ':attribute doit être que des chiffres.',
+    //             'digits' => ':attribute doit être de 6 chiffres.',
+    //         ],
+    //         [
+    //             'code' => "Le code de confirmation",
+    //         ]
+    //     );
 
-    public function store(Request $request)
-    {
-        // try {
-        //     $validator = validator(
-        //         $request->all(),
-        //         [
-        //             'code' => ['required', 'numeric', 'digits:6'],
-        //         ],
-        //         [
-        //             'required' => ':attribute est obligatoire.',
-        //             'numeric' => ':attribute doit être que des chiffres.',
-        //             'digits' => ':attribute doit être de 6 chiffres.',
-        //         ],
-        //         [
-        //             'code' => "Le code de confirmation",
-        //         ]
-        //        );
-        // } catch (\Throwable $th) {
-        //     return response()->json([
-        //         'status' => 'error',
-        //         'code' => 500,
-        //         'message' => $th->getMessage()], 500);        }
+    //     try{
+    //         if($validator->fails()){
+    //             return response()->json([
+    //                 'status' => 'error',
+    //                 'code' => 500,
+    //                 'message' => $validator->errors()->first()], 500);
+    //         }else{
+    //             $telephone = $request->input('telephone');
+    //             $coderand = $request->input('code');
+    //             $code = Code::where('telephone', $telephone)->value('code');
 
-        try{
-            // if($validator->fails()){
-            //     return response()->json([
-            //         'status' => 'error',
-            //         'code' => 500,
-            //         'message' => $validator->errors()->first()], 500);
-            // }else{
-            //     $telephone = $request->input('telephone');
-            //     $coderand = $request->input('code');
-            //     $code = Code::where('telephone', $telephone)->value('code');
-
-            //     if ($coderand == $code) {
-                    $icone = $request->icone->getClientOriginalName();
-                    $request->icone->move(public_path('images'), $icone);
-                    $clientData = $request->except('code');
-					$clientData['icone']=$icone;
-                    $client = Client::create($clientData);
-                    return response()->json([
-                        'status' => 'success',
-                        'code' => 201,
-                        'message' => 'Compte Client créé avec succès.',
-                        'client_id' => $client->id], 201);
-                // } else {
-                //     return response()->json([
-                //         'status' => 'error',
-                //         'code' => 500,
-                //         'message' => 'Code de Confirmation non valide.'], 500);
-                // }
-        //    }
-        }catch (Throwable $th) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 500,
-                'message' => $th->getMessage().'/'.$request], 500);
-            }
-    }
+    //             if ($coderand == $code) {
+    //                 $icone = $request->icone->getClientOriginalName();
+    //                 $request->icone->move(public_path('images'), $icone);
+    //                 $clientData = $request->except('code');
+	// 				$clientData['icone']=$icone;
+    //                 $client = Client::create($clientData);
+    //                 return response()->json([
+    //                     'status' => 'success',
+    //                     'code' => 201,
+    //                     'message' => 'Compte Client créé avec succès.',
+    //                     'client_id' => $client->id], 201);
+    //             } else {
+    //                 return response()->json([
+    //                     'status' => 'error',
+    //                     'code' => 500,
+    //                     'message' => 'Code de Confirmation non valide.'], 500);
+    //             }
+    //        }
+    //     }catch (Throwable $th) {
+    //         return response()->json([
+    //             'status' => 'error',
+    //             'code' => 500,
+    //             'message' => $th->getMessage().'/'.$request], 500);
+    //         }
+    // }
 
     /**
      * Display the specified resource.
@@ -202,7 +251,7 @@ class ClientController extends Controller
         try {
             if ($validator->fails()) {
                 return response()->json([
-                    'status' => 'failed',
+                    'status' => 'error',
                     'code' => 500,
                     'message' => $validator->errors()->first()
                 ]);
@@ -324,23 +373,17 @@ class ClientController extends Controller
 
     public function login(Request $request)
     {
-        try {
-            $request->validate([
-                'code' => ['required', 'numeric', 'digits:6'],
-            ], [
-                'required' => ':attribute est obligatoire.',
-                'numeric' => ':attribute doit être que des chiffres.',
-                'digits' => ':attribute doit être de 6 chiffres.',
-            ], [
-                'code' => 'Le code de confirmation',
-            ]);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'status' => 'error',
-                'code' => 500,
-                'message' => $th->getMessage()
-            ], 500);
-        }
+
+        $request->validate([
+            'code' => ['required', 'numeric', 'digits:6'],
+        ], [
+            'required' => ':attribute est obligatoire.',
+            'numeric' => ':attribute doit être que des chiffres.',
+            'digits' => ':attribute doit être de 6 chiffres.',
+        ], [
+            'code' => 'Le code de confirmation',
+        ]);
+
 
         try {
             $telephone = $request->input('telephone');
@@ -359,7 +402,7 @@ class ClientController extends Controller
                         'status' => 'success',
                         'code' => 201,
                         'message' => 'Heureux de vous revoir.',
-                        'data' => $user
+                        'data2' => $user
                     ], 201);
                 } else {
                     $client = Client::where('telephone', $telephone)->first();
@@ -367,7 +410,7 @@ class ClientController extends Controller
                         'status' => 'success',
                         'code' => 201,
                         'message' => 'Heureux de vous revoir.',
-                        'data' => $client
+                        'data2' => $client
                     ], 201);
                 }
             } else {

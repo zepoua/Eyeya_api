@@ -60,7 +60,7 @@ Route::post('client_user', [UserController::class, 'client_user']);
 Route::post('login', [UserController::class, 'login']);
 Route::post('login_code', [ClientController::class, 'login_code']);
 Route::post('client/login', [ClientController::class, 'login']);
-Route::post('vues', [UserController::class, 'vues']);
+Route::get('vues', [UserController::class, 'vues']);
 
 
 
